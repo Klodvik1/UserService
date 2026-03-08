@@ -7,6 +7,7 @@ import io.github.Klodvik1.dao.UserDao;
 import io.github.Klodvik1.dao.UserDaoImpl;
 import io.github.Klodvik1.mapper.UserMapper;
 import io.github.Klodvik1.service.UserService;
+import io.github.Klodvik1.service.UserServiceImpl;
 import io.github.Klodvik1.ui.UserConsoleMenu;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,7 @@ public class Main {
 
         UserDao userDao = new UserDaoImpl();
         UserMapper userMapper = new UserMapper();
-        UserService userService = new UserService(userDao, userMapper);
+        UserService userService = new UserServiceImpl(userDao, userMapper);
         UserConsoleMenu userConsoleMenu = new UserConsoleMenu(userService);
 
         try {
