@@ -2,16 +2,32 @@ package io.github.Klodvik1;
 
 //TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main {
-    public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+import io.github.Klodvik1.config.HibernateSessionFactoryProvider;
+import io.github.Klodvik1.dao.UserDao;
+import io.github.Klodvik1.dao.UserDaoImpl;
+import io.github.Klodvik1.mapper.UserMapper;
+import io.github.Klodvik1.service.UserService;
+import io.github.Klodvik1.ui.UserConsoleMenu;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
+public class Main {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class);
+
+    public static void main(String[] args) {
+        LOGGER.info("UserService запущен.");
+
+        UserDao userDao = new UserDaoImpl();
+        UserMapper userMapper = new UserMapper();
+        UserService userService = new UserService(userDao, userMapper);
+        UserConsoleMenu userConsoleMenu = new UserConsoleMenu(userService);
+
+        try {
+            userConsoleMenu.start();
+        }
+        finally {
+            HibernateSessionFactoryProvider.shutdown();
+            LOGGER.info("Работа UserService завершена.");
         }
     }
 }
