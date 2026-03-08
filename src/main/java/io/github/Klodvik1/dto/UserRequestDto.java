@@ -5,11 +5,16 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record UserRequestDto(
         @NotBlank(message = "Имя пользователя не должно быть пустым.")
         @Size(min = 2, max = 100, message = "Имя пользователя должно содержать от 2 до 100 символов.")
+        @Pattern(
+                regexp = "^[\\p{L}]+([\\s-][\\p{L}]+)*$",
+                message = "Имя пользователя должно содержать только буквы, пробелы и дефисы, без цифр."
+        )
         String name,
 
         @NotBlank(message = "Email пользователя не должен быть пустым.")

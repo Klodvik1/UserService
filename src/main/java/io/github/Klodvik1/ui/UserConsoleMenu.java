@@ -11,10 +11,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Scanner;
+import java.time.format.DateTimeFormatter;
 
 public class UserConsoleMenu {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserConsoleMenu.class);
-
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
     private final UserService userService;
     private final Scanner scanner;
 
@@ -172,10 +174,10 @@ public class UserConsoleMenu {
     }
 
     private void printUser(UserResponseDto user) {
-        System.out.println("id: " + user.id());
-        System.out.println("name: " + user.name());
-        System.out.println("email: " + user.email());
-        System.out.println("age: " + user.age());
-        System.out.println("createdAt: " + user.createdAt());
+        System.out.println("ID: " + user.id());
+        System.out.println("Имя: " + user.name());
+        System.out.println("Email: " + user.email());
+        System.out.println("Возраст: " + user.age());
+        System.out.println("Дата создания: " + user.createdAt().format(DATE_TIME_FORMATTER));
     }
 }
