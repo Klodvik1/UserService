@@ -4,6 +4,7 @@ import io.github.Klodvik1.config.HibernateSessionFactoryProvider;
 import io.github.Klodvik1.entity.User;
 import io.github.Klodvik1.exception.DataAccessException;
 import org.hibernate.Session;
+import org.hibernate.SessionFactory;
 import org.hibernate.Transaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,11 +15,21 @@ import java.util.Optional;
 public class UserDaoImpl implements UserDao {
     private static final Logger LOGGER = LoggerFactory.getLogger(UserDaoImpl.class);
 
+    private final SessionFactory sessionFactory;
+
+    public UserDaoImpl() {
+        this(HibernateSessionFactoryProvider.getSessionFactory());
+    }
+
+    public UserDaoImpl(SessionFactory sessionFactory) {
+        this.sessionFactory = sessionFactory;
+    }
+
     @Override
     public User create(User user) {
         Transaction transaction = null;
 
-        try (Session session = HibernateSessionFactoryProvider.getSessionFactory().openSession()) {
+        try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
 
             session.persist(user);
@@ -37,7 +48,7 @@ public class UserDaoImpl implements UserDao {
 
     @Override
     public Optional<User> findById(Long id) {
-        try (Session session = HibernateSessionFactoryProvider.getSessionFactory().openSession()) {
+        try (Session session = sessionFactory.openSession()) {
             User user = session.get(User.class, id);
 
             if (user != null) {
@@ -57,7 +68,7 @@ public class UserDaoImpl implements UserDao {
 
     @Override
     public List<User> findAll() {
-        try (Session session = HibernateSessionFactoryProvider.getSessionFactory().openSession()) {
+        try (Session session = sessionFactory.openSession()) {
             List<User> users = session.createQuery(
                             "from User user order by user.id",
                             User.class)
@@ -77,7 +88,7 @@ public class UserDaoImpl implements UserDao {
     public User update(User user) {
         Transaction transaction = null;
 
-        try (Session session = HibernateSessionFactoryProvider.getSessionFactory().openSession()) {
+        try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
 
             User updatedUser = session.merge(user);
@@ -98,7 +109,7 @@ public class UserDaoImpl implements UserDao {
     public boolean deleteById(Long id) {
         Transaction transaction = null;
 
-        try (Session session = HibernateSessionFactoryProvider.getSessionFactory().openSession()) {
+        try (Session session = sessionFactory.openSession()) {
             transaction = session.beginTransaction();
 
             User user = session.get(User.class, id);
