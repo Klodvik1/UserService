@@ -4,12 +4,12 @@ import io.github.Klodvik1.dto.UserRequestDto;
 import io.github.Klodvik1.dto.UserResponseDto;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface UserService
-{
+public interface UserService {
     UserResponseDto createUser(UserRequestDto userRequestDto);
 
-    UserResponseDto getUserById(Long id);
+    Optional<UserResponseDto> getUserById(Long id);
 
     List<UserResponseDto> getAllUsers();
 
