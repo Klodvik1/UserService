@@ -1,6 +1,7 @@
 package io.github.Klodvik1.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.Klodvik1.assembler.UserModelAssembler;
 import io.github.Klodvik1.dto.UserRequestDto;
 import io.github.Klodvik1.dto.UserResponseDto;
 import io.github.Klodvik1.exception.GlobalExceptionHandler;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.hateoas.MediaTypes;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -31,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, UserModelAssembler.class})
 class UserControllerTest {
     private static final LocalDateTime TEST_CREATED_AT =
             LocalDateTime.of(2026, 3, 21, 12, 30, 0);
@@ -46,7 +48,7 @@ class UserControllerTest {
     private UserService userService;
 
     @Test
-    @DisplayName("GET /users/{id} should return 200 and user when user exists")
+    @DisplayName("GET /users/{id} should return 200 and user with links when user exists")
     void getUserById_ShouldReturn200AndUser_WhenUserExists() throws Exception {
         UserResponseDto responseDto = buildUserResponseDto(
                 1L,
@@ -57,12 +59,16 @@ class UserControllerTest {
 
         given(userService.getUserById(1L)).willReturn(Optional.of(responseDto));
 
-        mockMvc.perform(get("/users/{id}", 1L))
+        mockMvc.perform(get("/users/{id}", 1L)
+                        .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Denis"))
                 .andExpect(jsonPath("$.email").value("denis@gmail.com"))
-                .andExpect(jsonPath("$.age").value(23));
+                .andExpect(jsonPath("$.age").value(23))
+                .andExpect(jsonPath("$.createdAt").value("21.03.2026 12:30:00"))
+                .andExpect(jsonPath("$._links.self.href").exists())
+                .andExpect(jsonPath("$._links.users.href").exists());
     }
 
     @Test
@@ -70,13 +76,14 @@ class UserControllerTest {
     void getUserById_ShouldReturn204_WhenUserDoesNotExist() throws Exception {
         given(userService.getUserById(1L)).willReturn(Optional.empty());
 
-        mockMvc.perform(get("/users/{id}", 1L))
+        mockMvc.perform(get("/users/{id}", 1L)
+                        .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
     }
 
     @Test
-    @DisplayName("GET /users should return 200 and users list")
+    @DisplayName("GET /users should return 200 and users collection with links")
     void getAllUsers_ShouldReturn200AndUsers() throws Exception {
         List<UserResponseDto> users = List.of(
                 buildUserResponseDto(2L, "Alice", "alice@gmail.com", 25),
@@ -85,17 +92,27 @@ class UserControllerTest {
 
         given(userService.getAllUsers()).willReturn(users);
 
-        mockMvc.perform(get("/users"))
+        mockMvc.perform(get("/users")
+                        .accept(MediaTypes.HAL_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].id").value(2))
-                .andExpect(jsonPath("$[0].name").value("Alice"))
-                .andExpect(jsonPath("$[1].id").value(1))
-                .andExpect(jsonPath("$[1].name").value("Denis"));
+                .andExpect(jsonPath("$._embedded.users.length()").value(2))
+                .andExpect(jsonPath("$._embedded.users[0].id").value(2))
+                .andExpect(jsonPath("$._embedded.users[0].name").value("Alice"))
+                .andExpect(jsonPath("$._embedded.users[0].email").value("alice@gmail.com"))
+                .andExpect(jsonPath("$._embedded.users[0].age").value(25))
+                .andExpect(jsonPath("$._embedded.users[0]._links.self.href").exists())
+                .andExpect(jsonPath("$._embedded.users[0]._links.users.href").exists())
+                .andExpect(jsonPath("$._embedded.users[1].id").value(1))
+                .andExpect(jsonPath("$._embedded.users[1].name").value("Denis"))
+                .andExpect(jsonPath("$._embedded.users[1].email").value("denis@gmail.com"))
+                .andExpect(jsonPath("$._embedded.users[1].age").value(23))
+                .andExpect(jsonPath("$._embedded.users[1]._links.self.href").exists())
+                .andExpect(jsonPath("$._embedded.users[1]._links.users.href").exists())
+                .andExpect(jsonPath("$._links.self.href").exists());
     }
 
     @Test
-    @DisplayName("POST /users should return 201 and created user")
+    @DisplayName("POST /users should return 201 and created user with links")
     void createUser_ShouldReturn201AndCreatedUser() throws Exception {
         UserRequestDto requestDto = buildUserRequestDto(
                 "Denis",
@@ -114,12 +131,16 @@ class UserControllerTest {
 
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaTypes.HAL_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Denis"))
                 .andExpect(jsonPath("$.email").value("denis@gmail.com"))
-                .andExpect(jsonPath("$.age").value(23));
+                .andExpect(jsonPath("$.age").value(23))
+                .andExpect(jsonPath("$.createdAt").value("21.03.2026 12:30:00"))
+                .andExpect(jsonPath("$._links.self.href").exists())
+                .andExpect(jsonPath("$._links.users.href").exists());
     }
 
     @Test
@@ -135,10 +156,12 @@ class UserControllerTest {
 
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(invalidJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Ошибка валидации тела запроса."))
-                .andExpect(jsonPath("$.details").isArray());
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.path").value("/users"));
     }
 
     @Test
@@ -155,13 +178,15 @@ class UserControllerTest {
 
         mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Пользователь с таким email уже существует."));
+                .andExpect(jsonPath("$.message").value("Пользователь с таким email уже существует."))
+                .andExpect(jsonPath("$.path").value("/users"));
     }
 
     @Test
-    @DisplayName("PUT /users/{id} should return 200 and updated user")
+    @DisplayName("PUT /users/{id} should return 200 and updated user with links")
     void updateUser_ShouldReturn200AndUpdatedUser() throws Exception {
         UserRequestDto requestDto = buildUserRequestDto(
                 "Denis Updated",
@@ -180,12 +205,16 @@ class UserControllerTest {
 
         mockMvc.perform(put("/users/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaTypes.HAL_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.name").value("Denis Updated"))
                 .andExpect(jsonPath("$.email").value("denis.updated@gmail.com"))
-                .andExpect(jsonPath("$.age").value(22));
+                .andExpect(jsonPath("$.age").value(22))
+                .andExpect(jsonPath("$.createdAt").value("21.03.2026 12:30:00"))
+                .andExpect(jsonPath("$._links.self.href").exists())
+                .andExpect(jsonPath("$._links.users.href").exists());
     }
 
     @Test
@@ -202,9 +231,11 @@ class UserControllerTest {
 
         mockMvc.perform(put("/users/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.message").value("Пользователь с id=1 не найден."));
+                .andExpect(jsonPath("$.message").value("Пользователь с id=1 не найден."))
+                .andExpect(jsonPath("$.path").value("/users/1"));
     }
 
     @Test
@@ -221,9 +252,11 @@ class UserControllerTest {
 
         mockMvc.perform(put("/users/{id}", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Пользователь с таким email уже существует."));
+                .andExpect(jsonPath("$.message").value("Пользователь с таким email уже существует."))
+                .andExpect(jsonPath("$.path").value("/users/1"));
     }
 
     @Test
@@ -237,9 +270,21 @@ class UserControllerTest {
     @Test
     @DisplayName("GET /users/{id} should return 400 when id is invalid")
     void getUserById_ShouldReturn400_WhenIdIsInvalid() throws Exception {
-        mockMvc.perform(get("/users/{id}", 0))
+        mockMvc.perform(get("/users/{id}", 0)
+                        .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Ошибка валидации параметров запроса."));
+                .andExpect(jsonPath("$.message").value("Ошибка валидации параметров запроса."))
+                .andExpect(jsonPath("$.path").value("/users/0"));
+    }
+
+    @Test
+    @DisplayName("DELETE /users/{id} should return 400 when id is invalid")
+    void deleteUserById_ShouldReturn400_WhenIdIsInvalid() throws Exception {
+        mockMvc.perform(delete("/users/{id}", 0)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Ошибка валидации параметров запроса."))
+                .andExpect(jsonPath("$.path").value("/users/0"));
     }
 
     private UserRequestDto buildUserRequestDto(
