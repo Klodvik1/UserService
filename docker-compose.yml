@@ -13,6 +13,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d user_service_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   kafka:
     image: confluentinc/cp-kafka:7.5.11
@@ -39,6 +44,83 @@ services:
     ports:
       - "1025:1025"
       - "8025:8025"
+
+  config-server:
+    build:
+      context: ../ConfigServer
+      dockerfile: Dockerfile
+    container_name: config-server
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+
+  discovery-server:
+    build:
+      context: ../DiscoveryServer
+      dockerfile: Dockerfile
+    container_name: discovery-server
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+
+  api-gateway:
+    build:
+      context: ../ApiGateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      - config-server
+      - discovery-server
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+
+  notification-service:
+    build:
+      context: ../NotificationService
+      dockerfile: Dockerfile
+    container_name: notification-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on:
+      kafka:
+        condition: service_started
+      mailhog:
+        condition: service_started
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
 
 volumes:
   postgres_data:
