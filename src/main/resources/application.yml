@@ -1,39 +1,18 @@
 spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/user_service_db
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
+  application:
+    name: user-service
 
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    open-in-view: false
-    properties:
-      hibernate:
-        format_sql: true
+  profiles:
+    default: local
 
-  kafka:
-    bootstrap-servers: localhost:9092
-    producer:
-      key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
-      properties:
-        "[spring.json.add.type.headers]": false
+  config:
+    import: optional:configserver:http://localhost:8888
 
-server:
-  port: 8080
-
-app:
-  kafka:
-    topics:
-      user-notification: user-notification-topic
-
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    operationsSorter: method
-    tagsSorter: alpha
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
